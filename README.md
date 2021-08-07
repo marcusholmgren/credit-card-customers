@@ -6,7 +6,27 @@ Predict Churning customers from a Credit Card dataset
 
 ## Tech Stack
 
-**Server:** Python, Jupyter, Pandas, Matplotlib, Seaborn, NumPy, scikit-learn
+**Server:** Python, Jupyter, Pandas, Matplotlib, Seaborn, NumPy, scikit-learn, pytest
+
+## Run the code
+
+Recommended to create a virtual environment to install dependencies
+```CLI
+python3 -m venv venv
+```
+
+Activate the virtual environment
+```
+source venv/bin/activate
+```
+
+```
+pip install -r requirements.txt
+```
+
+```
+pytest churn_script_logging_and_tests.py
+```
 
 ## Resources
 
