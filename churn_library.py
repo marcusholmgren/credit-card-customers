@@ -7,13 +7,19 @@ Customer churn machine learning
 # import libraries
 
 from os import PathLike
-
+import logging
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import joblib
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import plot_roc_curve, classification_report
 
 sns.set()
+logger = logging.getLogger(__name__)
 
 
 def import_data(pth: "PathLike[str]") -> pd.DataFrame:
@@ -218,4 +224,42 @@ def train_models(X_train, X_test, y_train, y_test):
     output:
               None
     """
-    pass
+    # grid search
+    rfc = RandomForestClassifier(random_state=42)
+    lrc = LogisticRegression()
+
+    param_grid = {
+        'n_estimators': [200, 500],
+        'max_features': ['auto', 'sqrt'],
+        'max_depth': [4, 5, 100],
+        'criterion': ['gini', 'entropy']
+    }
+
+    cv_rfc = GridSearchCV(estimator=rfc, param_grid=param_grid, cv=5)
+    cv_rfc.fit(X_train, y_train)
+
+    lrc.fit(X_train, y_train)
+
+    y_train_preds_rf = cv_rfc.best_estimator_.predict(X_train)
+    y_test_preds_rf = cv_rfc.best_estimator_.predict(X_test)
+
+    y_train_preds_lr = lrc.predict(X_train)
+    y_test_preds_lr = lrc.predict(X_test)
+
+    # scores
+    logger.info('random forest results')
+    logger.info('test results')
+    logger.info(classification_report(y_test, y_test_preds_rf))
+    logger.info('train results')
+    logger.info(classification_report(y_train, y_train_preds_rf))
+
+    logger.info('logistic regression results')
+    logger.info('test results')
+    logger.info(classification_report(y_test, y_test_preds_lr))
+    logger.info('train results')
+    logger.info(classification_report(y_train, y_train_preds_lr))
+
+    # save best model
+    joblib.dump(cv_rfc.best_estimator_, './models/rfc_model.pkl')
+    joblib.dump(lrc, './models/logistic_model.pkl')
+

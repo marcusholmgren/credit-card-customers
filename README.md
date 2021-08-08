@@ -25,7 +25,7 @@ pip install -r requirements.txt
 ```
 
 ```
-pytest churn_script_logging_and_tests.py
+pytest -p no:logging -s churn_script_logging_and_tests.py
 ```
 
 ## Resources
