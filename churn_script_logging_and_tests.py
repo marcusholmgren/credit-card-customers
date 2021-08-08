@@ -2,6 +2,7 @@ import os
 import pytest
 import logging
 import shutil
+import pandas as pd
 import churn_library as cls
 
 logging.basicConfig(
@@ -29,17 +30,32 @@ def perform_eda():
 
 @pytest.fixture()
 def encoder_helper():
-    pass
+    def _my(df, category_lst):
+        cls.encoder_helper(df, category_lst, response=None)
+    return _my
 
 
 @pytest.fixture()
 def perform_feature_engineering():
-    pass
+    cat_columns = [
+        'Gender',
+        'Education_Level',
+        'Marital_Status',
+        'Income_Category',
+        'Card_Category'
+    ]
+
+    def _my(df):
+        cls.encoder_helper(df, cat_columns, response=None)
+        return cls.perform_feature_engineering(df, response=None)
+    return _my
 
 
 @pytest.fixture()
-def train_models():
-    pass
+def train_models(X_train, X_test, y_train, y_test):
+    def _my():
+        cls.train_models(X_train, X_test, y_train, y_test)
+    return _my
 
 
 def test_import(import_data):
@@ -79,21 +95,39 @@ def test_encoder_helper(encoder_helper):
     """
     test encoder helper
     """
-    pass
+    cat_columns = [
+        'Gender',
+        'Education_Level',
+        'Marital_Status',
+        'Income_Category',
+        'Card_Category'
+    ]
+    enc_columns = [col + '_Churn' for col in cat_columns]
+    df = cls.import_data("./data/bank_data.csv")
+    encoder_helper(df, cat_columns)
+
+    assert set(cat_columns).issubset(df.columns)
+    assert set(enc_columns).issubset(df.columns)
 
 
 def test_perform_feature_engineering(perform_feature_engineering):
     """
     test perform_feature_engineering
     """
-    pass
+    df = cls.import_data("./data/bank_data.csv")
+    X_train, X_test, y_train, y_test = perform_feature_engineering(df)
+
+    assert X_train is pd.DataFrame
+    assert X_test is pd.DataFrame
+    assert y_train is pd.DataFrame
+    assert y_test is pd.DataFrame
 
 
 def test_train_models(train_models):
     """
     test train_models
     """
-    pass
+    assert False
 
 
 if __name__ == "__main__":
