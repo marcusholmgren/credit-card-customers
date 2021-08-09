@@ -67,6 +67,7 @@ def train_models():
 
 def clear_directory(path):
     with os.scandir(path) as entries:
+        entry: os.DirEntry
         for entry in entries:
             if entry.is_dir() and not entry.is_symlink():
                 shutil.rmtree(entry.path)
@@ -159,8 +160,3 @@ def test_train_models(train_models):
 if __name__ == "__main__":
     print('To run test suite issue the following command:')
     print('\tpytest -p no:logging -s churn_script_logging_and_tests.py')
-    # churn_df = cls.import_data("./data/bank_data.csv")
-    # test_import(cls.import_data)
-    # test_eda(lambda x: cls.perform_eda(churn_df))
-    # test_encoder_helper(lambda x, y, response: cls.encoder_helper(churn_df, y, response))
-    # test_perform_feature_engineering(lambda x, response: cls.perform_feature_engineering(churn_df, response))

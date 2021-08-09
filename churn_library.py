@@ -9,6 +9,7 @@ Customer churn machine learning
 from os import PathLike
 import logging
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
@@ -69,7 +70,6 @@ def perform_eda(df: pd.DataFrame):
     plt.savefig('./images/marital_status.png')
 
     plt.figure(figsize=(20, 10))
-    #ax = sns.distplot(df['Total_Trans_Ct'])
     cfg = sns.displot(df, x='Total_Trans_Ct', kde=True)
     cfg.set(title='Total Trans Ct')
     plt.tight_layout()
@@ -90,15 +90,16 @@ def encoder_helper(df, category_lst, response):
     input:
             df: pandas dataframe
             category_lst: list of columns that contain categorical features
-            response: string of response name [optional argument that could be used for naming variables or index y column]
+            response: string of response name [optional argument that could be used
+                                              for naming variables or index y column]
 
     output:
             df: pandas dataframe with new columns for
     """
     df['Churn'] = df['Attrition_Flag'].apply(lambda val: 0 if val == "Existing Customer" else 1)
-    y = df['Churn']
+    # y = df['Churn']
 
-    X = pd.DataFrame()
+    # X = pd.DataFrame()
 
     # gender encoded column
     gender_lst = []
@@ -144,14 +145,15 @@ def encoder_helper(df, category_lst, response):
 
     df['Card_Category_Churn'] = card_lst
 
-    #X[keep_cols] = df[keep_cols]
+    # X[keep_cols] = df[keep_cols]
 
 
 def perform_feature_engineering(df, response):
     """
     input:
               df: pandas dataframe
-              response: string of response name [optional argument that could be used for naming variables or index y column]
+              response: string of response name [optional argument that could be used
+                                                for naming variables or index y column]
 
     output:
               X_train: X training data
@@ -196,7 +198,26 @@ def classification_report_image(y_train,
     output:
              None
     """
-    pass
+    plt.rc('figure', figsize=(5, 5))
+    # plt.text(0.01, 0.05, str(model.summary()), {'fontsize': 12}) old approach
+    plt.text(0.01, 1.25, str('Random Forest Train'), {'fontsize': 10}, fontproperties='monospace')
+    plt.text(0.01, 0.05, str(classification_report(y_test, y_test_preds_rf)), {'fontsize': 10},
+             fontproperties='monospace')  # approach improved by OP -> monospace!
+    plt.text(0.01, 0.6, str('Random Forest Test'), {'fontsize': 10}, fontproperties='monospace')
+    plt.text(0.01, 0.7, str(classification_report(y_train, y_train_preds_rf)), {'fontsize': 10},
+             fontproperties='monospace')  # approach improved by OP -> monospace!
+    plt.axis('off')
+    plt.savefig('./images/random_forest_train.png')
+
+    plt.rc('figure', figsize=(5, 5))
+    plt.text(0.01, 1.25, str('Logistic Regression Train'), {'fontsize': 10}, fontproperties='monospace')
+    plt.text(0.01, 0.05, str(classification_report(y_train, y_train_preds_lr)), {'fontsize': 10},
+             fontproperties='monospace')  # approach improved by OP -> monospace!
+    plt.text(0.01, 0.6, str('Logistic Regression Test'), {'fontsize': 10}, fontproperties='monospace')
+    plt.text(0.01, 0.7, str(classification_report(y_test, y_test_preds_lr)), {'fontsize': 10},
+             fontproperties='monospace')  # approach improved by OP -> monospace!
+    plt.axis('off')
+    plt.savefig('./images/logistic_regression_train.png')
 
 
 def feature_importance_plot(model, X_data, output_pth):
@@ -210,7 +231,27 @@ def feature_importance_plot(model, X_data, output_pth):
     output:
              None
     """
-    pass
+    # Calculate feature importances
+    importances = model.best_estimator_.feature_importances_
+    # Sort feature importances in descending order
+    indices = np.argsort(importances)[::-1]
+
+    # Rearrange feature names so they match the sorted feature importances
+    names = [X_data.columns[i] for i in indices]
+
+    # Create plot
+    plt.figure(figsize=(20, 5))
+
+    # Create plot title
+    plt.title("Feature Importance")
+    plt.ylabel('Importance')
+
+    # Add bars
+    plt.bar(range(X_data.shape[1]), importances[indices])
+
+    # Add feature names as x-axis labels
+    plt.xticks(range(X_data.shape[1]), names, rotation=90)
+    plt.savefig(output_pth)
 
 
 def train_models(X_train, X_test, y_train, y_test):
