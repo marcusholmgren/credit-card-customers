@@ -28,6 +28,14 @@ pip install -r requirements.txt
 pytest -p no:logging -s churn_script_logging_and_tests.py
 ```
 
+```
+pylint churn_library.py
+```
+
+```
+autopep8 --in-place --aggressive --aggressive churn_library.py 
+```
+
 ## Resources
 
 * [Udacity](https://www.udacity.com/)
