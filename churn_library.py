@@ -3,11 +3,6 @@ Customer churn machine learning library.
 
 Functionality to perform feature engineering, exploratory data analysis and model training.
 """
-# library doc string
-
-
-# import libraries
-
 import logging
 from os import PathLike
 from typing import Tuple
@@ -94,7 +89,7 @@ def perform_eda(churn_df: pd.DataFrame):
 def encoder_helper(
         churn_df: pd.DataFrame,
         category_lst: "list[str]",
-        response):
+        response: "list[str]"):
     """
     helper function to turn each categorical column into a new column with
     proportion of churn for each category - associated with cell 15 from the notebook
@@ -119,7 +114,7 @@ def encoder_helper(
 
 
 def perform_feature_engineering(churn_df: pd.DataFrame,
-                                response: list[str]) \
+                                response: "list[str]") \
         -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
     input:
