@@ -183,6 +183,7 @@ def classification_report_image(y_train,
                             target_test,
                             target_train_preds,
                             target_test_preds):
+        plt.figure(figsize=(7, 7))
         plt.rc('figure', figsize=(5, 5))
         plt.text(0.01, 1.25, str(f'{name} Train'),
                  {'fontsize': 10}, fontproperties='monospace')
