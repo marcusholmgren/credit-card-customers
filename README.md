@@ -55,6 +55,19 @@ Runs the make lint command
 make lint
 ```
 
+## Docker
+
+Build image
+```
+docker build -t customer-churn . 
+```
+
+Run the unit test from built image
+```
+docker run customer-churn
+```
+
+
 ## Tech Stack
 
 **Server:** Python, Jupyter, Pandas, Matplotlib, Seaborn, NumPy, scikit-learn, pytest
