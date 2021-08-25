@@ -16,25 +16,29 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture()
 def import_data():
+    """Test fixture for test data"""
     return cls.import_data
 
 
 @pytest.fixture()
 def perform_eda():
+    """Test fixture for Exploratory Data Analysis"""
     clear_directory('./images')
     return cls.perform_eda
 
 
 @pytest.fixture()
 def encoder_helper():
-    def _func(churn_df, category_lst, response=None):
-        cls.encoder_helper(churn_df, category_lst, response)
+    """Test fixture for encoding category fields"""
+    def _func(churn_df, category_lst):
+        cls.encoder_helper(churn_df, category_lst)
 
     return _func
 
 
 @pytest.fixture()
 def perform_feature_engineering():
+    """Test fixture for feature engineering"""
     cat_columns = [
         'Gender',
         'Education_Level',
@@ -43,15 +47,16 @@ def perform_feature_engineering():
         'Card_Category'
     ]
 
-    def _func(churn_df, response=None):
-        cls.encoder_helper(churn_df, cat_columns, response)
-        return cls.perform_feature_engineering(churn_df, response)
+    def _func(churn_df):
+        cls.encoder_helper(churn_df, cat_columns)
+        return cls.perform_feature_engineering(churn_df)
 
     return _func
 
 
 @pytest.fixture()
 def train_models():
+    """Test fixture that trains ML models"""
     clear_directory('./models')
     cat_columns = [
         'Gender',
@@ -62,8 +67,8 @@ def train_models():
     ]
 
     def _func(churn_df):
-        cls.encoder_helper(churn_df, cat_columns, response=None)
-        x_train, x_test, y_train, y_test = cls.perform_feature_engineering(churn_df, response=None)
+        cls.encoder_helper(churn_df, cat_columns)
+        x_train, x_test, y_train, y_test = cls.perform_feature_engineering(churn_df)
         cls.train_models(x_train, x_test, y_train, y_test)
 
     return _func
@@ -126,7 +131,7 @@ def test_encoder_helper(encoder_helper):
     ]
     enc_columns = [col + '_Churn' for col in cat_columns]
     churn_df = cls.import_data("./data/bank_data.csv")
-    encoder_helper(churn_df, cat_columns, response=None)
+    encoder_helper(churn_df, cat_columns)
 
     assert set(cat_columns).issubset(churn_df.columns)
     assert set(enc_columns).issubset(churn_df.columns)
@@ -137,7 +142,7 @@ def test_perform_feature_engineering(perform_feature_engineering):
     test perform_feature_engineering
     """
     churn_df = cls.import_data("./data/bank_data.csv")
-    x_train, x_test, y_train, y_test = perform_feature_engineering(churn_df, response=None)
+    x_train, x_test, y_train, y_test = perform_feature_engineering(churn_df)
 
     assert isinstance(x_train, pd.DataFrame)
     assert isinstance(x_test, pd.DataFrame)

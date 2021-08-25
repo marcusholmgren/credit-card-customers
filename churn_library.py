@@ -88,8 +88,7 @@ def perform_eda(churn_df: pd.DataFrame):
 
 def encoder_helper(
         churn_df: pd.DataFrame,
-        category_lst: "list[str]",
-        response: "list[str]"):
+        category_lst: "list[str]"):
     """
     helper function to turn each categorical column into a new column with
     proportion of churn for each category - associated with cell 15 from the notebook
@@ -97,8 +96,6 @@ def encoder_helper(
     input:
             churn_df: pandas dataframe
             category_lst: list of columns that contain categorical features
-            response: string of response name [optional argument that could be used
-                                              for naming variables or index y column]
 
     output:
             df: pandas dataframe with new columns for
@@ -113,14 +110,11 @@ def encoder_helper(
         _calc_mean_churn(category)
 
 
-def perform_feature_engineering(churn_df: pd.DataFrame,
-                                response: "list[str]") \
+def perform_feature_engineering(churn_df: pd.DataFrame) \
         -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
     input:
               churn_df: pandas dataframe
-              response: string of response name [optional argument that could be used
-                                                for naming variables or index y column]
 
     output:
               X_train: X training data
@@ -216,7 +210,7 @@ def feature_importance_plot(model: GridSearchCV,
                             features_data: pd.DataFrame,
                             output_pth: "PathLike[str]"):
     """
-    creates and stores the feature importances in pth
+    creates and stores the feature importance's in pth
     input:
             model: model object containing feature_importances_
             features_data: pandas dataframe of X values
@@ -249,17 +243,17 @@ def feature_importance_plot(model: GridSearchCV,
 
 
 def train_models(
-        X_train: pd.DataFrame,
-        X_test: pd.DataFrame,
-        y_train: pd.Series,
-        y_test: pd.Series):
+        features_train: pd.DataFrame,
+        features_test: pd.DataFrame,
+        target_train: pd.Series,
+        target_test: pd.Series):
     """
     train, store model results: images + scores, and store models
     input:
-              X_train: X training data
-              X_test: X testing data
-              y_train: y training data
-              y_test: y testing data
+              features_train: X training data
+              features_test: X testing data
+              target_train: y training data
+              target_test: y testing data
     output:
               None
     """
@@ -275,42 +269,42 @@ def train_models(
     }
 
     cv_rfc = GridSearchCV(estimator=rfc, param_grid=param_grid, cv=5)
-    cv_rfc.fit(X_train, y_train)
+    cv_rfc.fit(features_train, target_train)
 
-    lrc.fit(X_train, y_train)
+    lrc.fit(features_train, target_train)
 
-    y_train_preds_rf = cv_rfc.best_estimator_.predict(X_train)
-    y_test_preds_rf = cv_rfc.best_estimator_.predict(X_test)
+    y_train_preds_rf = cv_rfc.best_estimator_.predict(features_train)
+    y_test_preds_rf = cv_rfc.best_estimator_.predict(features_test)
 
-    y_train_preds_lr = lrc.predict(X_train)
-    y_test_preds_lr = lrc.predict(X_test)
+    y_train_preds_lr = lrc.predict(features_train)
+    y_test_preds_lr = lrc.predict(features_test)
 
     # scores
     logger.info('random forest results')
     logger.info('test results')
-    logger.info(classification_report(y_test, y_test_preds_rf))
+    logger.info(classification_report(target_test, y_test_preds_rf))
     logger.info('train results')
-    logger.info(classification_report(y_train, y_train_preds_rf))
+    logger.info(classification_report(target_train, y_train_preds_rf))
 
     logger.info('logistic regression results')
     logger.info('test results')
-    logger.info(classification_report(y_test, y_test_preds_lr))
+    logger.info(classification_report(target_test, y_test_preds_lr))
     logger.info('train results')
-    logger.info(classification_report(y_train, y_train_preds_lr))
+    logger.info(classification_report(target_train, y_train_preds_lr))
 
     # save best model
     joblib.dump(cv_rfc.best_estimator_, './models/rfc_model.pkl')
     joblib.dump(lrc, './models/logistic_model.pkl')
 
     classification_report_image(
-        y_train,
-        y_test,
+        target_train,
+        target_test,
         y_train_preds_lr,
         y_train_preds_rf,
         y_test_preds_lr,
         y_test_preds_rf)
 
-    all_features = pd.concat([X_train, X_test], axis=0)
+    all_features = pd.concat([features_train, features_test], axis=0)
     feature_importance_plot(
         cv_rfc,
         all_features,
