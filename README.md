@@ -1,14 +1,19 @@
 # Credit Card customers
 
-Predict Churning customers from a Credit Card dataset
+Predict Churning customers from a Credit Card dataset.
+This library contains all the functions for a complete end-to-end process of analysing, feature engineering and model training.
+[LogisticRegression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html) is used for baseline comparison against a [RandomForestClassifier](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html) that is trained using [GridSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html) to find the optimal hyperparameters.
 
-* [Churn notebook](churn_notebook.ipynb) - raw Jupyter notebook with code for EDA and machine learning model selection.
-* [churn_library.py](churn_library.py) - extracted code from the Jupyter notebook
+## Structure
+* [Churn notebook](churn_notebook.ipynb) - raw Jupyter notebook with code from EDA and machine learning model selection.
+* [churn_library.py](churn_library.py) - extracted & refactored code from the Jupyter notebook
 * [churn_script_logging_and_tests.py](churn_script_logging_and_tests.py) - unit test for the `churn_library`
 
-Folder:
+Folders:
 * __data__ - the raw data file for the analysis and model creation.
 * __images__ - contains all the images produced from EDA and model selection.
+  * __eda__ - exploratory data analysis plots
+  * __results__ - feature importance and model performance metrics
 * __logs__ - log file produced from running the `churn_library`
 * __models__ - pickled trained model
 
