@@ -2,10 +2,14 @@
 Customer churn machine learning library.
 
 Functionality to perform feature engineering, exploratory data analysis and model training.
+
+Author: Marcus Holmgren <marcus.holmgren1@gmail.com>
+Created: 2021 August
 """
 import logging
+import os
 from os import PathLike
-from typing import Tuple
+from typing import Tuple, Union
 
 import joblib
 import matplotlib.pyplot as plt
@@ -22,7 +26,7 @@ sns.set()
 logger = logging.getLogger(__name__)
 
 
-def import_data(pth: "PathLike[str]") -> pd.DataFrame:
+def import_data(pth: Union[str, "PathLike[str]"]) -> pd.DataFrame:
     """
     returns dataframe for the csv found at pth
 
@@ -31,9 +35,10 @@ def import_data(pth: "PathLike[str]") -> pd.DataFrame:
     output:
             df: pandas dataframe
     """
+    create_dir('./logs')
     import_df = pd.read_csv(filepath_or_buffer=pth)
-    import_df['Churn'] = import_df['Attrition_Flag'].apply(
-        lambda val: 0 if val == "Existing Customer" else 1)
+    import_df['Churn'] = pd.get_dummies(
+        import_df['Attrition_Flag'])['Attrited Customer']
     return import_df
 
 
@@ -46,12 +51,13 @@ def perform_eda(churn_df: pd.DataFrame):
     output:
             None
     """
+    create_dir('./images/eda')
     plt.figure(figsize=(20, 10))
     axes = churn_df['Churn'].hist()
     axes.set_title('Churning customers')
     axes.set_ylabel('Frequency')
     axes.set_xlabel('Attrition')
-    plt.savefig('./images/churn_hist.png')
+    plt.savefig('./images/eda/churn_hist.png')
 
     plt.figure(figsize=(20, 10))
     axes = churn_df['Customer_Age'].hist()
@@ -59,7 +65,7 @@ def perform_eda(churn_df: pd.DataFrame):
     axes.set_ylabel('Frequency')
     axes.set_xlabel('Age')
     plt.tight_layout()
-    plt.savefig('./images/customer_age.png')
+    plt.savefig('./images/eda/customer_age.png')
 
     plt.figure(figsize=(20, 10))
     axes = churn_df.Marital_Status.value_counts('normalize').plot(kind='bar')
@@ -67,13 +73,13 @@ def perform_eda(churn_df: pd.DataFrame):
     axes.set_ylabel('Frequency')
     axes.set_xticklabels(axes.get_xticklabels(), rotation=45, ha='right')
     plt.tight_layout()
-    plt.savefig('./images/marital_status.png')
+    plt.savefig('./images/eda/marital_status.png')
 
     plt.figure(figsize=(20, 10))
     cfg = sns.displot(churn_df, x='Total_Trans_Ct', kde=True)
     cfg.set(title='Total Trans Ct')
     plt.tight_layout()
-    plt.savefig('./images/total_trans_ct.png')
+    plt.savefig('./images/eda/total_trans_ct.png')
 
     plt.figure(figsize=(20, 10))
     axes = sns.heatmap(
@@ -83,7 +89,7 @@ def perform_eda(churn_df: pd.DataFrame):
         linewidths=2)
     axes.set_title('Correlation matrix heatmap')
     plt.tight_layout()
-    plt.savefig('./images/correlation_heatmap.png')
+    plt.savefig('./images/eda/correlation_heatmap.png')
 
 
 def encoder_helper(
@@ -190,7 +196,8 @@ def classification_report_image(y_train,
                  {'fontsize': 10},
                  fontproperties='monospace')  # approach improved by OP -> monospace!
         plt.axis('off')
-        plt.savefig(f'./images/{name.replace(" ", "_").lower()}_train.png')
+        plt.savefig(
+            f'./images/results/{name.replace(" ", "_").lower()}_train.png')
 
     _classification_fig(
         'Random Forest',
@@ -208,7 +215,7 @@ def classification_report_image(y_train,
 
 def feature_importance_plot(model: GridSearchCV,
                             features_data: pd.DataFrame,
-                            output_pth: "PathLike[str]"):
+                            output_pth: Union[str, "PathLike[str]"]):
     """
     creates and stores the feature importance's in pth
     input:
@@ -257,6 +264,8 @@ def train_models(
     output:
               None
     """
+    create_dir('./images/results')
+    create_dir('./models')
     # grid search
     rfc = RandomForestClassifier(random_state=42)
     lrc = LogisticRegression()
@@ -308,4 +317,18 @@ def train_models(
     feature_importance_plot(
         cv_rfc,
         all_features,
-        './images/feature_importance.png')
+        './images/results/feature_importance.png')
+
+
+def create_dir(path: Union[str, "PathLike[str]"]):
+    """ Create target Directory if don't exist.
+    input:
+            path: directory to create
+    output:
+            None
+    """
+    if not os.path.exists(path):
+        os.mkdir(path)
+        logger.info('Directory %s Created.', path)
+    else:
+        logger.info('Directory %s already exists.', path)

@@ -1,4 +1,16 @@
-churn_script_logging_and_tests - INFO - Testing import_data: SUCCESS
+churn_library - INFO - Directory ./logs already exists.
+churn_script_logging_and_tests - INFO - Testing bank_data: SUCCESS
+churn_library - INFO - Directory ./logs already exists.
+churn_script_logging_and_tests - INFO - Testing bank_data: SUCCESS
+churn_library - INFO - Directory ./images/eda Created.
+churn_library - INFO - Directory ./logs already exists.
+churn_script_logging_and_tests - INFO - Testing bank_data: SUCCESS
+churn_library - INFO - Directory ./logs already exists.
+churn_script_logging_and_tests - INFO - Testing bank_data: SUCCESS
+churn_library - INFO - Directory ./logs already exists.
+churn_script_logging_and_tests - INFO - Testing bank_data: SUCCESS
+churn_library - INFO - Directory ./images/results Created.
+churn_library - INFO - Directory ./models already exists.
 churn_library - INFO - random forest results
 churn_library - INFO - test results
 churn_library - INFO -               precision    recall  f1-score   support

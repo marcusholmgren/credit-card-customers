@@ -1,4 +1,10 @@
-""" Unit test for the churn library """
+#!/usr/bin/env python3
+"""
+Unit test for the churn library.
+
+Author: Marcus Holmgren <marcus.holmgren1@gmail.com>
+Created: 2021 August
+"""
 import os
 import logging
 import shutil
@@ -12,12 +18,6 @@ logging.basicConfig(
     filemode='w',
     format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-
-@pytest.fixture()
-def import_data():
-    """Test fixture for test data"""
-    return cls.import_data
 
 
 @pytest.fixture()
@@ -85,18 +85,25 @@ def clear_directory(path):
                 os.remove(entry.path)
 
 
-def test_import(import_data):
-    """
-    test data import - this example is completed for you to assist with the other test functions
-    """
+def bank_data() -> pd.DataFrame:
+    """ Read bank data into data frame."""
     try:
-        churn_df = import_data("./data/bank_data.csv")
-        logger.info("Testing import_data: SUCCESS")
+        churn_df = cls.import_data("./data/bank_data.csv")
+        logger.info("Testing bank_data: SUCCESS")
+        return churn_df
     except FileNotFoundError as err:
-        logger.error("Testing import_eda: The file wasn't found")
+        logger.error("Testing bank_data: The file wasn't found")
         raise err
 
+
+def test_import():
+    """
+    test data import
+    """
+    churn_df = bank_data()
+
     try:
+        assert isinstance(churn_df, pd.DataFrame)
         assert churn_df.shape[0] > 0
         assert churn_df.shape[1] > 0
     except AssertionError as err:
@@ -109,9 +116,9 @@ def test_eda(perform_eda):
     test perform eda function
     """
     assert os.path.exists('./images')
-    perform_eda(cls.import_data("./data/bank_data.csv"))
+    perform_eda(bank_data())
 
-    images = list(os.listdir('./images'))
+    images = list(os.listdir('./images/eda'))
     images.sort()
     assert len(images) == 5
     assert ['churn_hist.png', 'correlation_heatmap.png', 'customer_age.png', 'marital_status.png',
@@ -129,8 +136,8 @@ def test_encoder_helper(encoder_helper):
         'Income_Category',
         'Card_Category'
     ]
-    enc_columns = [col + '_Churn' for col in cat_columns]
-    churn_df = cls.import_data("./data/bank_data.csv")
+    enc_columns = [f'{col}_Churn' for col in cat_columns]
+    churn_df = bank_data()
     encoder_helper(churn_df, cat_columns)
 
     assert set(cat_columns).issubset(churn_df.columns)
@@ -141,7 +148,7 @@ def test_perform_feature_engineering(perform_feature_engineering):
     """
     test perform_feature_engineering
     """
-    churn_df = cls.import_data("./data/bank_data.csv")
+    churn_df = bank_data()
     x_train, x_test, y_train, y_test = perform_feature_engineering(churn_df)
 
     assert isinstance(x_train, pd.DataFrame)
@@ -158,7 +165,7 @@ def test_train_models(train_models):
     """
     test train_models
     """
-    churn_df = cls.import_data("./data/bank_data.csv")
+    churn_df = bank_data()
     train_models(churn_df)
 
     models = list(os.listdir('./models'))
@@ -166,11 +173,14 @@ def test_train_models(train_models):
     assert len(models) == 2
     assert ['logistic_model.pkl', 'rfc_model.pkl'] == models
 
-    images = list(os.listdir('./images'))
+    images = list(os.listdir('./images/results'))
     assert 'feature_importance.png' in images
     assert 'logistic_regression_train.png' in images
+    assert 'random_forest_train.png' in images
 
 
 if __name__ == "__main__":
     print('To run test suite issue the following command:')
     print('\tpytest -p no:logging -s churn_script_logging_and_tests.py')
+    print('Or if your system have GNU make use command:')
+    print('\tmake test')
