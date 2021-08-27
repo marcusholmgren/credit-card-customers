@@ -106,14 +106,7 @@ def encoder_helper(
     output:
             df: pandas dataframe with new columns for
     """
-
-    def _calc_mean_churn(column: str):
-        groups: pd.Series = churn_df.groupby(column).mean()['Churn']
-        lst = [groups.loc[val] for val in churn_df[column]]
-        churn_df[f'{column}_Churn'] = lst
-
-    for category in category_lst:
-        _calc_mean_churn(category)
+    return pd.get_dummies(churn_df, columns=category_lst, drop_first=True)
 
 
 def perform_feature_engineering(churn_df: pd.DataFrame) \
@@ -145,11 +138,15 @@ def perform_feature_engineering(churn_df: pd.DataFrame) \
         'Total_Trans_Ct',
         'Total_Ct_Chng_Q4_Q1',
         'Avg_Utilization_Ratio',
-        'Gender_Churn',
-        'Education_Level_Churn',
-        'Marital_Status_Churn',
-        'Income_Category_Churn',
-        'Card_Category_Churn']
+        'Gender_M', 'Education_Level_Doctorate',
+        'Education_Level_Graduate', 'Education_Level_High School',
+        'Education_Level_Post-Graduate', 'Education_Level_Uneducated',
+        'Education_Level_Unknown', 'Marital_Status_Married',
+        'Marital_Status_Single', 'Marital_Status_Unknown',
+        'Income_Category_$40K - $60K', 'Income_Category_$60K - $80K',
+        'Income_Category_$80K - $120K', 'Income_Category_Less than $40K',
+        'Income_Category_Unknown', 'Card_Category_Gold',
+        'Card_Category_Platinum', 'Card_Category_Silver']
     features[keep_cols] = churn_df[keep_cols]
 
     # train test split
@@ -245,7 +242,8 @@ def feature_importance_plot(model: GridSearchCV,
     plt.bar(range(features_data.shape[1]), importances[indices])
 
     # Add feature names as x-axis labels
-    plt.xticks(range(features_data.shape[1]), names, rotation=90)
+    plt.xticks(range(features_data.shape[1]), names, rotation=45)
+    plt.tight_layout()
     plt.savefig(output_pth)
 
 

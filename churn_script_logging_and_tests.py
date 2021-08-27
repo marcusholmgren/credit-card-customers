@@ -30,8 +30,9 @@ def perform_eda():
 @pytest.fixture()
 def encoder_helper():
     """Test fixture for encoding category fields"""
+
     def _func(churn_df, category_lst):
-        cls.encoder_helper(churn_df, category_lst)
+        return cls.encoder_helper(churn_df, category_lst)
 
     return _func
 
@@ -48,7 +49,7 @@ def perform_feature_engineering():
     ]
 
     def _func(churn_df):
-        cls.encoder_helper(churn_df, cat_columns)
+        churn_df = cls.encoder_helper(churn_df, cat_columns)
         return cls.perform_feature_engineering(churn_df)
 
     return _func
@@ -67,7 +68,7 @@ def train_models():
     ]
 
     def _func(churn_df):
-        cls.encoder_helper(churn_df, cat_columns)
+        churn_df = cls.encoder_helper(churn_df, cat_columns)
         x_train, x_test, y_train, y_test = cls.perform_feature_engineering(churn_df)
         cls.train_models(x_train, x_test, y_train, y_test)
 
@@ -136,11 +137,19 @@ def test_encoder_helper(encoder_helper):
         'Income_Category',
         'Card_Category'
     ]
-    enc_columns = [f'{col}_Churn' for col in cat_columns]
+    enc_columns = ['Gender_M', 'Education_Level_Doctorate',
+                   'Education_Level_Graduate', 'Education_Level_High School',
+                   'Education_Level_Post-Graduate', 'Education_Level_Uneducated',
+                   'Education_Level_Unknown', 'Marital_Status_Married',
+                   'Marital_Status_Single', 'Marital_Status_Unknown',
+                   'Income_Category_$40K - $60K', 'Income_Category_$60K - $80K',
+                   'Income_Category_$80K - $120K', 'Income_Category_Less than $40K',
+                   'Income_Category_Unknown', 'Card_Category_Gold',
+                   'Card_Category_Platinum', 'Card_Category_Silver']
     churn_df = bank_data()
-    encoder_helper(churn_df, cat_columns)
+    churn_df = encoder_helper(churn_df, cat_columns)
 
-    assert set(cat_columns).issubset(churn_df.columns)
+    assert not set(cat_columns).issubset(churn_df.columns)
     assert set(enc_columns).issubset(churn_df.columns)
 
 
@@ -157,8 +166,8 @@ def test_perform_feature_engineering(perform_feature_engineering):
     assert isinstance(y_test, pd.Series)
     assert y_train.shape == (7088,)
     assert y_test.shape == (3039,)
-    assert x_train.shape == (7088, 19)
-    assert x_test.shape == (3039, 19)
+    assert x_train.shape == (7088, 32)
+    assert x_test.shape == (3039, 32)
 
 
 def test_train_models(train_models):
