@@ -104,9 +104,9 @@ def test_import():
     churn_df = bank_data()
 
     try:
-        assert isinstance(churn_df, pd.DataFrame)
-        assert churn_df.shape[0] > 0
-        assert churn_df.shape[1] > 0
+        assert isinstance(churn_df, pd.DataFrame), 'Expected churn_df to be DataFrame.'
+        assert churn_df.shape[0] > 0, 'Expected churn_df rows to be greater than zero.'
+        assert churn_df.shape[1] > 0, 'Expected churn_df columns to be greater than zero.'
     except AssertionError as err:
         logger.error("Testing import_data: The file doesn't appear to have rows and columns")
         raise err
@@ -116,12 +116,12 @@ def test_eda(perform_eda):
     """
     test perform eda function
     """
-    assert os.path.exists('./images')
+    assert os.path.exists('./images'), 'Expected ./images folder to exist.'
     perform_eda(bank_data())
 
     images = list(os.listdir('./images/eda'))
     images.sort()
-    assert len(images) == 5
+    assert len(images) == 5, 'Expected ./images/eda to contain five files.'
     assert ['churn_hist.png', 'correlation_heatmap.png', 'customer_age.png', 'marital_status.png',
             'total_trans_ct.png'] == images
 
@@ -149,8 +149,9 @@ def test_encoder_helper(encoder_helper):
     churn_df = bank_data()
     churn_df = encoder_helper(churn_df, cat_columns)
 
-    assert not set(cat_columns).issubset(churn_df.columns)
-    assert set(enc_columns).issubset(churn_df.columns)
+    assert not set(cat_columns).issubset(churn_df.columns), \
+        'Expected cat_columns to not appear after calling encoder_helper.'
+    assert set(enc_columns).issubset(churn_df.columns), 'Expected enc_columns to exists after calling encoder_helper.'
 
 
 def test_perform_feature_engineering(perform_feature_engineering):
@@ -160,14 +161,14 @@ def test_perform_feature_engineering(perform_feature_engineering):
     churn_df = bank_data()
     x_train, x_test, y_train, y_test = perform_feature_engineering(churn_df)
 
-    assert isinstance(x_train, pd.DataFrame)
-    assert isinstance(x_test, pd.DataFrame)
-    assert isinstance(y_train, pd.Series)
-    assert isinstance(y_test, pd.Series)
-    assert y_train.shape == (7088,)
-    assert y_test.shape == (3039,)
-    assert x_train.shape == (7088, 32)
-    assert x_test.shape == (3039, 32)
+    assert isinstance(x_train, pd.DataFrame), 'Expected x_train to be DataFrame.'
+    assert isinstance(x_test, pd.DataFrame), 'Expected x_test to be DataFrame.'
+    assert isinstance(y_train, pd.Series), 'Expected y_train to be DataFrame.'
+    assert isinstance(y_test, pd.Series), 'Expected y_test to be DataFrame.'
+    assert y_train.shape == (7088,), 'Expected y_train.shape to have many rows.'
+    assert y_test.shape == (3039,), 'Expected y_test shape to have rows.'
+    assert x_train.shape == (7088, 32), 'Expected x_train.shape to have rows and columns.'
+    assert x_test.shape == (3039, 32), 'Expected x_test.shape to have rows and columns.'
 
 
 def test_train_models(train_models):
@@ -179,13 +180,13 @@ def test_train_models(train_models):
 
     models = list(os.listdir('./models'))
     models.sort()
-    assert len(models) == 2
+    assert len(models) == 2, 'Expected two models.'
     assert ['logistic_model.pkl', 'rfc_model.pkl'] == models
 
     images = list(os.listdir('./images/results'))
-    assert 'feature_importance.png' in images
-    assert 'logistic_regression_train.png' in images
-    assert 'random_forest_train.png' in images
+    assert 'feature_importance.png' in images, 'Expected feature importance image.'
+    assert 'logistic_regression_train.png' in images, 'Expected logistic regression train image.'
+    assert 'random_forest_train.png' in images, 'Expected random forest train image.'
 
 
 if __name__ == "__main__":

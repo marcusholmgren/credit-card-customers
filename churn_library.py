@@ -151,7 +151,7 @@ def perform_feature_engineering(churn_df: pd.DataFrame) \
 
     # train test split
     x_train, x_test, y_train, y_test = train_test_split(
-        features, target, test_size=0.3, random_state=42)
+        features, target, test_size=0.3, random_state=42, stratify=target)
     return x_train, x_test, y_train, y_test
 
 

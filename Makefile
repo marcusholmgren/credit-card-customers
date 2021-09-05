@@ -28,7 +28,7 @@ lint:
 	pylint churn_library.py churn_script_logging_and_tests.py
 
 test:
-	pytest -p no:logging -s churn_script_logging_and_tests.py
+	pytest -vv -p no:logging -s churn_script_logging_and_tests.py
 
 clean:
 	find . -type d -name "__pycache__" | xargs rm -rf {};
