@@ -130,3 +130,8 @@ dmypy.json
 
 # JetBrains IntelliJ
 .idea
+
+# Project-specific output
+images/
+models/
+logs/

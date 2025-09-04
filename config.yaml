@@ -1,0 +1,78 @@
+# Configuration for the churn prediction project
+
+data_path: "./data/bank_data.csv"
+image_dir: "./images"
+log_dir: "./logs"
+model_dir: "./models"
+
+eda:
+  image_dir: "./images/eda"
+  plots:
+    churn_hist:
+      title: "Churning Customers"
+      ylabel: "Frequency"
+      xlabel: "Attrition"
+      filename: "churn_hist.png"
+    customer_age:
+      title: "Customer Age"
+      ylabel: "Frequency"
+      xlabel: "Age"
+      filename: "customer_age.png"
+    marital_status:
+      title: "Marital Status"
+      ylabel: "Frequency"
+      filename: "marital_status.png"
+    total_trans_ct:
+      title: "Total Transaction Count Distribution"
+      filename: "total_trans_ct.png"
+    correlation_heatmap:
+      title: "Correlation Matrix Heatmap"
+      filename: "correlation_heatmap.png"
+
+feature_engineering:
+  target_col: "Churn"
+  test_size: 0.3
+  random_state: 42
+  numeric_features:
+    - 'Customer_Age'
+    - 'Dependent_count'
+    - 'Months_on_book'
+    - 'Total_Relationship_Count'
+    - 'Months_Inactive_12_mon'
+    - 'Contacts_Count_12_mon'
+    - 'Credit_Limit'
+    - 'Total_Revolving_Bal'
+    - 'Avg_Open_To_Buy'
+    - 'Total_Amt_Chng_Q4_Q1'
+    - 'Total_Trans_Amt'
+    - 'Total_Trans_Ct'
+    - 'Total_Ct_Chng_Q4_Q1'
+    - 'Avg_Utilization_Ratio'
+  categorical_features:
+    - 'Gender'
+    - 'Education_Level'
+    - 'Marital_Status'
+    - 'Income_Category'
+    - 'Card_Category'
+
+models:
+  n_iter_search: 10 # Number of iterations for RandomizedSearchCV
+  random_forest:
+    param_dist:
+      n_estimators: [200, 500, 1000]
+      max_features: ['sqrt']
+      max_depth: [4, 5, 10, 100]
+      criterion: ['gini', 'entropy']
+    model_path: "./models/rfc_model.pkl"
+  lightgbm:
+    param_dist:
+      n_estimators: [200, 500, 1000]
+      learning_rate: [0.01, 0.1, 0.2]
+      num_leaves: [20, 31, 40]
+      max_depth: [-1, 5, 10]
+    model_path: "./models/lgbm_model.pkl"
+  logistic_regression:
+    model_path: "./models/logistic_model.pkl"
+  results:
+    image_dir: "./images/results"
+    feature_importance_filename: "feature_importance.png"
