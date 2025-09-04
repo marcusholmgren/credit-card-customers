@@ -1,332 +1,255 @@
 """
 Customer churn machine learning library.
-
-Functionality to perform feature engineering, exploratory data analysis and model training.
+Functionality to perform feature engineering, exploratory data analysis, and model training.
 
 Author: Marcus Holmgren <marcus.holmgren1@gmail.com>
 Created: 2021 August
+Refactored: 2024
 """
 import logging
 import os
 from os import PathLike
 from typing import Tuple, Union
+import yaml
 
 import joblib
+import lightgbm as lgb
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 sns.set()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
+def load_config(config_path: str = 'config.yaml') -> dict:
+    """Load configuration from a YAML file."""
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
+config = load_config()
 
 def import_data(pth: Union[str, "PathLike[str]"]) -> pd.DataFrame:
     """
-    returns dataframe for the csv found at pth
-
+    Returns a DataFrame for the CSV found at pth.
     input:
-            pth: a path to the csv
+        pth: a path to the csv
     output:
-            df: pandas dataframe
+        df: pandas dataframe
     """
-    create_dir('./logs')
-    import_df = pd.read_csv(filepath_or_buffer=pth)
-    import_df['Churn'] = pd.get_dummies(
-        import_df['Attrition_Flag'])['Attrited Customer']
-    return import_df
+    os.makedirs(config['log_dir'], exist_ok=True)
+    df = pd.read_csv(filepath_or_buffer=pth)
+    df = df.drop(columns=['Unnamed: 0', 'CLIENTNUM'])
+    df['Churn'] = df['Attrition_Flag'].apply(lambda val: 0 if val == "Existing Customer" else 1)
+    df = df.drop(columns=['Attrition_Flag'])
+    return df
 
+def _save_plot(filename: str, directory: str):
+    """Helper function to save plots."""
+    os.makedirs(directory, exist_ok=True)
+    plt.savefig(os.path.join(directory, filename))
+    plt.close()
 
-def perform_eda(churn_df: pd.DataFrame):
-    """
-    perform eda on dataframe and save figures to images folder
-    input:
-            churn_df: pandas dataframe
-
-    output:
-            None
-    """
-    create_dir('./images/eda')
+def plot_churn_histogram(df: pd.DataFrame):
+    """Plot and save churn histogram."""
     plt.figure(figsize=(20, 10))
-    axes = churn_df['Churn'].hist()
-    axes.set_title('Churning customers')
-    axes.set_ylabel('Frequency')
-    axes.set_xlabel('Attrition')
-    plt.savefig('./images/eda/churn_hist.png')
+    plot_config = config['eda']['plots']['churn_hist']
+    axes = df['Churn'].hist()
+    axes.set_title(plot_config['title'])
+    axes.set_ylabel(plot_config['ylabel'])
+    axes.set_xlabel(plot_config['xlabel'])
+    _save_plot(plot_config['filename'], config['eda']['image_dir'])
 
+def plot_customer_age_histogram(df: pd.DataFrame):
+    """Plot and save customer age histogram."""
     plt.figure(figsize=(20, 10))
-    axes = churn_df['Customer_Age'].hist()
-    axes.set_title('Customer Age')
-    axes.set_ylabel('Frequency')
-    axes.set_xlabel('Age')
+    plot_config = config['eda']['plots']['customer_age']
+    axes = df['Customer_Age'].hist()
+    axes.set_title(plot_config['title'])
+    axes.set_ylabel(plot_config['ylabel'])
+    axes.set_xlabel(plot_config['xlabel'])
     plt.tight_layout()
-    plt.savefig('./images/eda/customer_age.png')
+    _save_plot(plot_config['filename'], config['eda']['image_dir'])
 
+def plot_marital_status_bar(df: pd.DataFrame):
+    """Plot and save marital status bar chart."""
     plt.figure(figsize=(20, 10))
-    axes = churn_df.Marital_Status.value_counts('normalize').plot(kind='bar')
-    axes.set_title('Marital Status')
-    axes.set_ylabel('Frequency')
+    plot_config = config['eda']['plots']['marital_status']
+    axes = df.Marital_Status.value_counts('normalize').plot(kind='bar')
+    axes.set_title(plot_config['title'])
+    axes.set_ylabel(plot_config['ylabel'])
     axes.set_xticklabels(axes.get_xticklabels(), rotation=45, ha='right')
     plt.tight_layout()
-    plt.savefig('./images/eda/marital_status.png')
+    _save_plot(plot_config['filename'], config['eda']['image_dir'])
 
+def plot_total_trans_ct_distplot(df: pd.DataFrame):
+    """Plot and save total transaction count distribution."""
     plt.figure(figsize=(20, 10))
-    cfg = sns.displot(churn_df, x='Total_Trans_Ct', kde=True)
-    cfg.set(title='Total Trans Ct')
+    plot_config = config['eda']['plots']['total_trans_ct']
+    cfg = sns.histplot(df['Total_Trans_Ct'], stat='density', kde=True)
+    cfg.set_title(plot_config['title'])
     plt.tight_layout()
-    plt.savefig('./images/eda/total_trans_ct.png')
+    _save_plot(plot_config['filename'], config['eda']['image_dir'])
 
+def plot_correlation_heatmap(df: pd.DataFrame):
+    """Plot and save correlation heatmap."""
     plt.figure(figsize=(20, 10))
-    axes = sns.heatmap(
-        churn_df.corr(),
-        annot=False,
-        cmap='Dark2_r',
-        linewidths=2)
-    axes.set_title('Correlation matrix heatmap')
+    plot_config = config['eda']['plots']['correlation_heatmap']
+    numeric_df = df.select_dtypes(include='number')
+    axes = sns.heatmap(numeric_df.corr(), annot=False, cmap='Dark2_r', linewidths=2)
+    axes.set_title(plot_config['title'])
     plt.tight_layout()
-    plt.savefig('./images/eda/correlation_heatmap.png')
+    _save_plot(plot_config['filename'], config['eda']['image_dir'])
 
-
-def encoder_helper(
-        churn_df: pd.DataFrame,
-        category_lst: "list[str]"):
+def perform_eda(df: pd.DataFrame):
     """
-    helper function to turn each categorical column into a new column with
-    proportion of churn for each category - associated with cell 15 from the notebook
-
-    input:
-            churn_df: pandas dataframe
-            category_lst: list of columns that contain categorical features
-
-    output:
-            df: pandas dataframe with new columns for
+    Perform EDA on the dataframe and save figures to the images folder.
     """
-    return pd.get_dummies(churn_df, columns=category_lst, drop_first=True)
+    plot_churn_histogram(df)
+    plot_customer_age_histogram(df)
+    plot_marital_status_bar(df)
+    plot_total_trans_ct_distplot(df)
+    plot_correlation_heatmap(df)
 
-
-def perform_feature_engineering(churn_df: pd.DataFrame) \
-        -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+def perform_feature_engineering(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
-    input:
-              churn_df: pandas dataframe
-
-    output:
-              X_train: X training data
-              X_test: X testing data
-              y_train: y training data
-              y_test: y testing data
+    Splits the data and defines the preprocessing pipeline.
     """
-    target = churn_df['Churn']
-    features = pd.DataFrame()
-    keep_cols = [
-        'Customer_Age',
-        'Dependent_count',
-        'Months_on_book',
-        'Total_Relationship_Count',
-        'Months_Inactive_12_mon',
-        'Contacts_Count_12_mon',
-        'Credit_Limit',
-        'Total_Revolving_Bal',
-        'Avg_Open_To_Buy',
-        'Total_Amt_Chng_Q4_Q1',
-        'Total_Trans_Amt',
-        'Total_Trans_Ct',
-        'Total_Ct_Chng_Q4_Q1',
-        'Avg_Utilization_Ratio',
-        'Gender_M', 'Education_Level_Doctorate',
-        'Education_Level_Graduate', 'Education_Level_High School',
-        'Education_Level_Post-Graduate', 'Education_Level_Uneducated',
-        'Education_Level_Unknown', 'Marital_Status_Married',
-        'Marital_Status_Single', 'Marital_Status_Unknown',
-        'Income_Category_$40K - $60K', 'Income_Category_$60K - $80K',
-        'Income_Category_$80K - $120K', 'Income_Category_Less than $40K',
-        'Income_Category_Unknown', 'Card_Category_Gold',
-        'Card_Category_Platinum', 'Card_Category_Silver']
-    features[keep_cols] = churn_df[keep_cols]
+    target = df[config['feature_engineering']['target_col']]
+    features = df.drop(columns=[config['feature_engineering']['target_col']])
 
-    # train test split
-    x_train, x_test, y_train, y_test = train_test_split(
-        features, target, test_size=0.3, random_state=42, stratify=target)
-    return x_train, x_test, y_train, y_test
+    X_train, X_test, y_train, y_test = train_test_split(
+        features,
+        target,
+        test_size=config['feature_engineering']['test_size'],
+        random_state=config['feature_engineering']['random_state'],
+        stratify=target
+    )
+    return X_train, X_test, y_train, y_test
 
+def get_preprocessor() -> ColumnTransformer:
+    """Returns a ColumnTransformer for preprocessing features."""
+    cat_features = config['feature_engineering']['categorical_features']
+    numeric_features = config['feature_engineering']['numeric_features']
 
-def classification_report_image(y_train,
-                                y_test,
-                                y_train_preds_lr,
-                                y_train_preds_rf,
-                                y_test_preds_lr,
-                                y_test_preds_rf):
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', StandardScaler(), numeric_features),
+            ('cat', OneHotEncoder(handle_unknown='ignore'), cat_features)
+        ],
+        remainder='passthrough'
+    )
+    return preprocessor
+
+def classification_report_image(y_train, y_test, y_train_preds, y_test_preds, model_name: str):
     """
-    produces classification report for training and testing results and stores report as image
-    in images folder
-    input:
-            y_train: training response values
-            y_test:  test response values
-            y_train_preds_lr: training predictions from logistic regression
-            y_train_preds_rf: training predictions from random forest
-            y_test_preds_lr: test predictions from logistic regression
-            y_test_preds_rf: test predictions from random forest
-
-    output:
-             None
+    Produces a classification report for training and testing results and stores the report as an image.
     """
+    plt.figure(figsize=(7, 7))
+    plt.rc('figure', figsize=(5, 5))
+    plt.text(0.01, 1.25, str(f'{model_name} Train'), {'fontsize': 10}, fontproperties='monospace')
+    plt.text(0.01, 0.6, str(classification_report(y_train, y_train_preds)), {'fontsize': 10}, fontproperties='monospace')
+    plt.text(0.01, 0.5, str(f'{model_name} Test'), {'fontsize': 10}, fontproperties='monospace')
+    plt.text(0.01, -0.1, str(classification_report(y_test, y_test_preds)), {'fontsize': 10}, fontproperties='monospace')
+    plt.axis('off')
 
-    def _classification_fig(name: str, target_train,
-                            target_test,
-                            target_train_preds,
-                            target_test_preds):
-        plt.figure(figsize=(7, 7))
-        plt.rc('figure', figsize=(5, 5))
-        plt.text(0.01, 1.25, str(f'{name} Train'),
-                 {'fontsize': 10}, fontproperties='monospace')
-        plt.text(0.01, 0.05, str(classification_report(target_test, target_test_preds)),
-                 {'fontsize': 10},
-                 fontproperties='monospace')  # approach improved by OP -> monospace!
-        plt.text(0.01, 0.6, str(f'{name} Test'),
-                 {'fontsize': 10}, fontproperties='monospace')
-        plt.text(0.01, 0.7, str(classification_report(target_train, target_train_preds)),
-                 {'fontsize': 10},
-                 fontproperties='monospace')  # approach improved by OP -> monospace!
-        plt.axis('off')
-        plt.savefig(
-            f'./images/results/{name.replace(" ", "_").lower()}_train.png')
+    results_dir = config['models']['results']['image_dir']
+    _save_plot(f'{model_name.replace(" ", "_").lower()}_report.png', results_dir)
 
-    _classification_fig(
-        'Random Forest',
-        y_train,
-        y_test,
-        y_train_preds_rf,
-        y_test_preds_rf)
-    _classification_fig(
-        'Logistic Regression',
-        y_train,
-        y_test,
-        y_train_preds_lr,
-        y_test_preds_lr)
-
-
-def feature_importance_plot(model: GridSearchCV,
-                            features_data: pd.DataFrame,
-                            output_pth: Union[str, "PathLike[str]"]):
+def feature_importance_plot(model, feature_names: list, output_pth: str):
     """
-    creates and stores the feature importance's in pth
-    input:
-            model: model object containing feature_importances_
-            features_data: pandas dataframe of X values
-            output_pth: path to store the figure
-
-    output:
-             None
+    Creates and stores the feature importance plot.
     """
-    # Calculate feature importances
-    importances = model.best_estimator_.feature_importances_
-    # Sort feature importances in descending order
+    importances = model.feature_importances_
     indices = np.argsort(importances)[::-1]
+    names = [feature_names[i] for i in indices]
 
-    # Rearrange feature names so they match the sorted feature importances
-    names = [features_data.columns[i] for i in indices]
-
-    # Create plot
     plt.figure(figsize=(20, 5))
-
-    # Create plot title
     plt.title("Feature Importance")
     plt.ylabel('Importance')
-
-    # Add bars
-    plt.bar(range(features_data.shape[1]), importances[indices])
-
-    # Add feature names as x-axis labels
-    plt.xticks(range(features_data.shape[1]), names, rotation=45)
+    plt.bar(range(len(names)), importances[indices])
+    plt.xticks(range(len(names)), names, rotation=90)
     plt.tight_layout()
-    plt.savefig(output_pth)
+    _save_plot(os.path.basename(output_pth), os.path.dirname(output_pth))
 
-
-def train_models(
-        features_train: pd.DataFrame,
-        features_test: pd.DataFrame,
-        target_train: pd.Series,
-        target_test: pd.Series):
+def train_models(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, y_test: pd.Series):
     """
-    train, store model results: images + scores, and store models
-    input:
-              features_train: X training data
-              features_test: X testing data
-              target_train: y training data
-              target_test: y testing data
-    output:
-              None
+    Train, store model results, and save models.
     """
-    create_dir('./images/results')
-    create_dir('./models')
-    # grid search
-    rfc = RandomForestClassifier(random_state=42)
-    lrc = LogisticRegression()
+    os.makedirs(config['model_dir'], exist_ok=True)
+    preprocessor = get_preprocessor()
 
-    param_grid = {
-        'n_estimators': [200, 500],
-        'max_features': ['auto', 'sqrt'],
-        'max_depth': [4, 5, 100],
-        'criterion': ['gini', 'entropy']
+    # Define models
+    models = {
+        'Logistic Regression': Pipeline(steps=[('preprocessor', preprocessor),
+                                              ('classifier', LogisticRegression(max_iter=1000, random_state=config['feature_engineering']['random_state']))]),
+        'Random Forest': Pipeline(steps=[('preprocessor', preprocessor),
+                                        ('classifier', RandomForestClassifier(random_state=config['feature_engineering']['random_state']))]),
+        'LightGBM': Pipeline(steps=[('preprocessor', preprocessor),
+                                   ('classifier', lgb.LGBMClassifier(random_state=config['feature_engineering']['random_state']))])
     }
 
-    cv_rfc = GridSearchCV(estimator=rfc, param_grid=param_grid, cv=5)
-    cv_rfc.fit(features_train, target_train)
+    # Train and tune models
+    for name, model_pipeline in models.items():
+        logger.info(f"Training {name}...")
+        if name in ['Random Forest', 'LightGBM']:
+            param_dist = config['models'][name.lower().replace(' ', '_')]['param_dist']
+            # Prefix parameters with 'classifier__' for pipeline
+            param_dist = {f'classifier__{k}': v for k, v in param_dist.items()}
 
-    lrc.fit(features_train, target_train)
+            search = RandomizedSearchCV(
+                model_pipeline,
+                param_distributions=param_dist,
+                n_iter=config['models']['n_iter_search'],
+                cv=5,
+                random_state=config['feature_engineering']['random_state']
+            )
+            search.fit(X_train, y_train)
+            best_model = search.best_estimator_
+        else:
+            model_pipeline.fit(X_train, y_train)
+            best_model = model_pipeline
 
-    y_train_preds_rf = cv_rfc.best_estimator_.predict(features_train)
-    y_test_preds_rf = cv_rfc.best_estimator_.predict(features_test)
+        # Predictions
+        y_train_preds = best_model.predict(X_train)
+        y_test_preds = best_model.predict(X_test)
 
-    y_train_preds_lr = lrc.predict(features_train)
-    y_test_preds_lr = lrc.predict(features_test)
+        # Logging results
+        logger.info(f'{name} Results:\n' + classification_report(y_test, y_test_preds))
 
-    # scores
-    logger.info('random forest results')
-    logger.info('test results')
-    logger.info(classification_report(target_test, y_test_preds_rf))
-    logger.info('train results')
-    logger.info(classification_report(target_train, y_train_preds_rf))
+        # Save model
+        model_path_key = name.lower().replace(' ', '_')
+        joblib.dump(best_model, config['models'][model_path_key]['model_path'])
 
-    logger.info('logistic regression results')
-    logger.info('test results')
-    logger.info(classification_report(target_test, y_test_preds_lr))
-    logger.info('train results')
-    logger.info(classification_report(target_train, y_train_preds_lr))
+        # Generate and save classification reports as images
+        classification_report_image(y_train, y_test, y_train_preds, y_test_preds, name)
 
-    # save best model
-    joblib.dump(cv_rfc.best_estimator_, './models/rfc_model.pkl')
-    joblib.dump(lrc, './models/logistic_model.pkl')
-
-    classification_report_image(
-        target_train,
-        target_test,
-        y_train_preds_lr,
-        y_train_preds_rf,
-        y_test_preds_lr,
-        y_test_preds_rf)
-
-    all_features = pd.concat([features_train, features_test], axis=0)
-    feature_importance_plot(
-        cv_rfc,
-        all_features,
-        './images/results/feature_importance.png')
+        # Feature importance for tree-based models
+        if name in ['Random Forest', 'LightGBM']:
+            try:
+                feature_names = best_model.named_steps['preprocessor'].get_feature_names_out()
+                feature_importance_plot(
+                    best_model.named_steps['classifier'],
+                    list(feature_names),
+                    os.path.join(config['models']['results']['image_dir'], f'{model_path_key}_feature_importance.png')
+                )
+            except Exception as e:
+                logger.error(f"Could not generate feature importance plot for {name}: {e}")
 
 
-def create_dir(path: Union[str, "PathLike[str]"]):
-    """ Create target Directory if don't exist.
-    input:
-            path: directory to create
-    output:
-            None
-    """
-    if not os.path.exists(path):
-        os.mkdir(path)
-        logger.info('Directory %s Created.', path)
-    else:
-        logger.info('Directory %s already exists.', path)
+if __name__ == '__main__':
+    df = import_data(config['data_path'])
+    perform_eda(df)
+    X_train, X_test, y_train, y_test = perform_feature_engineering(df)
+    train_models(X_train, X_test, y_train, y_test)
