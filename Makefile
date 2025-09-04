@@ -3,7 +3,6 @@
 help:
 		@echo "Please use 'make <target>' where <target> is one of"
 		@echo ""
-		@echo "  setup       create python virtual environment"
 		@echo "  install     install packages"
 		@echo "  format      reformat code"
 		@echo "  lint        lint code"
@@ -12,20 +11,14 @@ help:
 		@echo ""
 		@echo "Check the Makefile to know exactly what each target is doing."
 
-setup:
-	## Recommend you create a virtualenv
-	python3 -m venv venv
-	source venv/bin/activate
-
 install:
-	pip install --upgrade pip && \
-		pip install -r requirements.txt
+	uv sync
 
 format:
-	autopep8 --in-place --aggressive --aggressive churn_library.py
+	uv run ruff format
 
 lint:
-	pylint churn_library.py churn_script_logging_and_tests.py
+	uv run ruff check
 
 test:
 	pytest -vv -p no:logging -s churn_script_logging_and_tests.py

@@ -1,0 +1,19 @@
+[project]
+name = "credit-card-customers"
+version = "0.1.0"
+dependencies = [
+    "joblib",
+    "lightgbm",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "seaborn",
+    "pyyaml",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "ruff>=0.12.12",
+]
