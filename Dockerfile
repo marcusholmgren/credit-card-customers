@@ -1,24 +1,14 @@
-# pull official base image
-FROM python:3.8.3-slim-buster
+FROM python:3.12-slim
 
-# set working directory
-WORKDIR /usr/src/app
+# Install uv.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# install system dependencies
-RUN apt-get update \
-  && apt-get -y install netcat gcc --no-install-recommends \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+# Copy the application into the container.
+COPY . /app
 
-# install python dependencies
-COPY requirements.txt ./
+# Install the application dependencies.
+WORKDIR /app
+RUN uv sync --frozen --no-cache
 
-RUN pip install --upgrade pip \
-    && pip install -r requirements.txt \
-    && rm -rf /root/.cache/pip
-
-# add app
-COPY . .
-
-# run
-ENTRYPOINT ["pytest", "-p", "no:logging", "-s", "churn_script_logging_and_tests.py"]
+# Run the application.
+CMD ["uv", "run", "pytest", "-p", "no:logging", "-s", "churn_script_logging_and_tests.py"]

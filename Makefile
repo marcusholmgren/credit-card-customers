@@ -8,6 +8,7 @@ help:
 		@echo "  lint        lint code"
 		@echo "  test        run all the tests"
 		@echo "  clean       remove *.pyc files and __pycache__ directory"
+		@echo "  mlflow      run mlflow server"
 		@echo ""
 		@echo "Check the Makefile to know exactly what each target is doing."
 
@@ -26,3 +27,6 @@ test:
 clean:
 	find . -type d -name "__pycache__" | xargs rm -rf {};
 	rm -rf venv
+
+mlflow:
+    uv run mlflow server --host 127.0.0.1 --port 8080
