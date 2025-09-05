@@ -11,6 +11,7 @@ import logging
 import os
 from os import PathLike
 from typing import Tuple, Union
+import mlflow
 import yaml
 
 import joblib
@@ -275,59 +276,95 @@ def train_models(
         ),
     }
 
+    mlflow.set_experiment("churn_prediction")
     # Train and tune models
     for name, model_pipeline in models.items():
         logger.info(f"Training {name}...")
-        if name in ["Random Forest", "LightGBM"]:
-            param_dist = config["models"][name.lower().replace(" ", "_")]["param_dist"]
-            # Prefix parameters with 'classifier__' for pipeline
-            param_dist = {f"classifier__{k}": v for k, v in param_dist.items()}
+        with mlflow.start_run(run_name=name):
+            if name in ["Random Forest", "LightGBM"]:
+                param_dist = config["models"][name.lower().replace(" ", "_")][
+                    "param_dist"
+                ]
+                # Prefix parameters with 'classifier__' for pipeline
+                param_dist_prefixed = {
+                    f"classifier__{k}": v for k, v in param_dist.items()
+                }
 
-            search = RandomizedSearchCV(
-                model_pipeline,
-                param_distributions=param_dist,
-                n_iter=config["models"]["n_iter_search"],
-                cv=5,
-                random_state=config["feature_engineering"]["random_state"],
+                search = RandomizedSearchCV(
+                    model_pipeline,
+                    param_distributions=param_dist_prefixed,
+                    n_iter=config["models"]["n_iter_search"],
+                    cv=5,
+                    random_state=config["feature_engineering"]["random_state"],
+                )
+                search.fit(X_train, y_train)
+                best_model = search.best_estimator_
+                mlflow.log_params(param_dist)
+                mlflow.log_params(search.best_params_)
+            else:
+                model_pipeline.fit(X_train, y_train)
+                best_model = model_pipeline
+
+            # Predictions
+            y_train_preds = best_model.predict(X_train)
+            y_test_preds = best_model.predict(X_test)
+
+            # Logging results
+            logger.info(
+                f"{name} Results:\n{classification_report(y_test, y_test_preds)}"
             )
-            search.fit(X_train, y_train)
-            best_model = search.best_estimator_
-        else:
-            model_pipeline.fit(X_train, y_train)
-            best_model = model_pipeline
+            report = classification_report(y_test, y_test_preds, output_dict=True)
 
-        # Predictions
-        y_train_preds = best_model.predict(X_train)
-        y_test_preds = best_model.predict(X_test)
+            # Flatten the report for MLflow logging
+            report_flat = {}
+            for key, value in report.items():
+                if isinstance(value, dict):
+                    for sub_key, sub_value in value.items():
+                        report_flat[f"{key}_{sub_key}"] = sub_value
+                else:
+                    report_flat[key] = value
+            mlflow.log_metrics(report_flat)
 
-        # Logging results
-        logger.info(f"{name} Results:\n{classification_report(y_test, y_test_preds)}")
+            # Save model
+            model_path_key = name.lower().replace(" ", "_")
+            joblib.dump(best_model, config["models"][model_path_key]["model_path"])
+            mlflow.sklearn.log_model(
+                sk_model=best_model,
+                name=model_path_key,
+                input_example=X_train.head(),
+            )
 
-        # Save model
-        model_path_key = name.lower().replace(" ", "_")
-        joblib.dump(best_model, config["models"][model_path_key]["model_path"])
+            # Generate and save classification reports as images
+            classification_report_image(
+                y_train, y_test, y_train_preds, y_test_preds, name
+            )
+            report_image_path = os.path.join(
+                config["models"]["results"]["image_dir"],
+                f"{name.replace(' ', '_').lower()}_report.png",
+            )
+            mlflow.log_artifact(report_image_path)
 
-        # Generate and save classification reports as images
-        classification_report_image(y_train, y_test, y_train_preds, y_test_preds, name)
-
-        # Feature importance for tree-based models
-        if name in ["Random Forest", "LightGBM"]:
-            try:
-                feature_names = best_model.named_steps[
-                    "preprocessor"
-                ].get_feature_names_out()
-                feature_importance_plot(
-                    best_model.named_steps["classifier"],
-                    list(feature_names),
-                    os.path.join(
+            # Feature importance for tree-based models
+            if name in ["Random Forest", "LightGBM"]:
+                try:
+                    feature_names = best_model.named_steps[
+                        "preprocessor"
+                    ].get_feature_names_out()
+                    feature_importance_path = os.path.join(
                         config["models"]["results"]["image_dir"],
                         f"{model_path_key}_feature_importance.png",
-                    ),
-                )
-            except Exception as e:
-                logger.error(
-                    f"Could not generate feature importance plot for {name}: {e}"
-                )
+                    )
+                    feature_importance_plot(
+                        best_model.named_steps["classifier"],
+                        list(feature_names),
+                        feature_importance_path,
+                    )
+                    mlflow.log_artifact(feature_importance_path)
+                except Exception as e:
+                    logger.error(
+                        f"Could not generate feature importance plot for {name}: {e}"
+                    )
+
 
 
 if __name__ == "__main__":
